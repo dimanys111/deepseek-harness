@@ -15374,7 +15374,7 @@
       "kind": "event",
       "event": "subagent/model-selection-policy",
       "surface": false,
-      "digest": "a6567ccb2e530606b775371eb4fa31468d72084339968e8b0440a516a23b39dc",
+      "digest": "8c425a7649fc61fca18ffb38a0212597e8638c5161b714d918dd228de090a100",
       "schema": {
         "root": 0,
         "nodes": [
@@ -15416,6 +15416,11 @@
                 "name": "allowedModels",
                 "type": 2,
                 "optional": false
+              },
+              {
+                "name": "defaultRoute",
+                "type": 3,
+                "optional": true
               }
             ],
             "indices": []
@@ -21948,13 +21953,6 @@
       "sources": []
     },
     {
-      "digest": "0d47a8f3d847243c4488e755ad4cab7a04ac5d4621b9c81865524cf3f4d8536f",
-      "names": [],
-      "sources": [
-        "packages/subagent/tool-subagent/src/model-selection-state.ts:17"
-      ]
-    },
-    {
       "digest": "0e10d7c096b47e61defe372a5fc8bd37d835199410eac44367f95c45082498bd",
       "names": [],
       "sources": []
@@ -22644,6 +22642,13 @@
       ],
       "sources": [
         "packages/feedback/message-feedback/src/types.ts:17"
+      ]
+    },
+    {
+      "digest": "393fb97369a9b78a41211db762608825e44af6f3e5391ea10837a99a561f4703",
+      "names": [],
+      "sources": [
+        "packages/subagent/tool-subagent/src/model-selection-state.ts:17"
       ]
     },
     {
@@ -23866,6 +23871,11 @@
       "sources": []
     },
     {
+      "digest": "8c425a7649fc61fca18ffb38a0212597e8638c5161b714d918dd228de090a100",
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "8c627d7a45fa406cea879a3922105e27ed4c3c7966e264afaf11ea7a330f2dd1",
       "names": [],
       "sources": []
@@ -24198,11 +24208,6 @@
       "sources": [
         "packages/core/session/src/types.ts:311"
       ]
-    },
-    {
-      "digest": "a6567ccb2e530606b775371eb4fa31468d72084339968e8b0440a516a23b39dc",
-      "names": [],
-      "sources": []
     },
     {
       "digest": "a6b41f5bede8094d7bf635be5d69b1bd7a25e006ca9cf9415bceb9322f1a7feb",

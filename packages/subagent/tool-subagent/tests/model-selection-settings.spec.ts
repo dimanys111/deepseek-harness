@@ -100,6 +100,50 @@ describe('SubagentModelSelectionConfig', () => {
     await ctx.fiber.dispose()
   })
 
+  it('applies a validated default child route to new Sessions', async () => {
+    const ctx = await boot()
+    await selectionConfigs.get(ctx)!.update({
+      enabled: true,
+      allowedModels: ALLOWED_MODELS,
+      defaultProvider: 'alpha',
+      defaultModel: 'fast-model',
+    })
+    expect(ctx.subagentModelSelection.current()).toEqual({
+      enabled: true,
+      allowedModels: ALLOWED_MODELS,
+      defaultRoute: { provider: 'alpha', model: 'fast-model' },
+    })
+
+    const agent = await createAgent(ctx, 'default-route')
+    expect(subagentModelSelectionPolicy(ctx.sessionProjections, agent.session)).toEqual({
+      allowedModels: ALLOWED_MODELS,
+      defaultRoute: { provider: 'alpha', model: 'fast-model' },
+    })
+    await ctx.fiber.dispose()
+  })
+
+  it('rejects a partial or unlisted default child route when it is read', async () => {
+    const ctx = new Context()
+
+    selectionConfigs.set(ctx, await liveConfig(ctx, SubagentModelSelectionConfig))
+    await selectionConfigs.get(ctx)!.update({
+      enabled: true,
+      allowedModels: ALLOWED_MODELS,
+      defaultProvider: 'alpha',
+    })
+    expect(() => ctx.subagentModelSelection.current())
+      .toThrow('subagent default route requires both provider and model, or neither')
+
+    await selectionConfigs.get(ctx)!.update({
+      enabled: true,
+      allowedModels: ALLOWED_MODELS,
+      defaultProvider: 'alpha',
+      defaultModel: 'deep-model',
+    })
+    expect(() => ctx.subagentModelSelection.current()).toThrow('is not among the allowed models')
+    await ctx.fiber.dispose()
+  })
+
   it('rejects duplicate routes, enabled empty settings, and an empty durable policy', async () => {
     const ctx = new Context()
 
@@ -145,7 +189,7 @@ describe('SubagentModelSelectionConfig', () => {
       allowedModels: ALLOWED_MODELS,
     })
     const enabled = await createAgent(ctx, 'enabled')
-    expect(subagentModelSelectionPolicy(ctx.sessionProjections, enabled.session)).toEqual(ALLOWED_MODELS)
+    expect(subagentModelSelectionPolicy(ctx.sessionProjections, enabled.session)).toEqual({ allowedModels: ALLOWED_MODELS })
     expect(selectable(ctx, enabled)).toBe(true)
     expect(selectable(ctx, disabled)).toBe(false)
 
@@ -342,7 +386,7 @@ describe('SubagentModelSelectionConfig', () => {
       meta: { parentSession: parent.id, origin: 'subagent' },
     })
     expect(selectable(ctx, child)).toBe(true)
-    expect(subagentModelSelectionPolicy(ctx.sessionProjections, child.session)).toEqual(ALLOWED_MODELS)
+    expect(subagentModelSelectionPolicy(ctx.sessionProjections, child.session)).toEqual({ allowedModels: ALLOWED_MODELS })
 
     const orphan = await createAgent(ctx, 'orphan', {
       meta: { parentSession: SessionId('missing-parent'), origin: 'subagent' },

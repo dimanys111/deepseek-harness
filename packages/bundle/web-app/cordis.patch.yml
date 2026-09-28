@@ -239,6 +239,11 @@
     - id: locale
       name: '@deepseek-ai/dsh-client-locale'
 
+    # Russian language pack: adds the `ru` language and its dictionaries on top
+    # of the built-in zh/en registry. Uncovered namespaces fall back to English.
+    - id: locale-ru
+      name: '@deepseek-ai/dsh-client-locale-ru'
+
     - id: shortcuts
       name: '@deepseek-ai/dsh-client-shortcuts'
 

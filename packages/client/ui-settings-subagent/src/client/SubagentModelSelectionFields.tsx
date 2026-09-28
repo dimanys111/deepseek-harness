@@ -11,7 +11,7 @@ import css from './SubagentModelSelectionFields.module.css'
 
 /** Plain model state and callbacks supplied by the owning Subagent card. */
 export type SubagentModelSelectionFieldsProps = PropsLocale<'settings.subagent'>
-  & Pick<SubagentModelSelectionCardFace, 'toggleEnabled' | 'toggleModel' | 'retryCatalog'>
+  & Pick<SubagentModelSelectionCardFace, 'toggleEnabled' | 'toggleModel' | 'retryCatalog' | 'setDefault'>
   & { state: SubagentModelSelectionCardState }
 
 /**
@@ -116,6 +116,36 @@ export function SubagentModelSelectionFields(props: SubagentModelSelectionFields
               : state.catalogStatus === 'ready'
                 ? <p className={css.notice}>{t('subagentModelSelectionEmpty')}</p>
                 : null}
+            {state.candidates.length > 0
+              ? (
+                <fieldset className={css.models}>
+                  <legend>{t('subagentModelSelectionDefault')}</legend>
+                  <p className={css.hint}>{t('subagentModelSelectionDefaultHint')}</p>
+                  <label className={css.model}>
+                    <input
+                      type="radio"
+                      name="subagent-default-route"
+                      checked={state.defaultKey === undefined}
+                      disabled={!state.writable || state.saving}
+                      onChange={() => { props.setDefault(undefined) }}
+                    />
+                    <span className={css.modelName}>{t('subagentModelSelectionDefaultInherit')}</span>
+                  </label>
+                  {state.candidates.filter(candidate => candidate.selected).map(candidate => (
+                    <label key={candidate.key} className={css.model}>
+                      <input
+                        type="radio"
+                        name="subagent-default-route"
+                        checked={state.defaultKey === candidate.key}
+                        disabled={!state.writable || state.saving}
+                        onChange={() => { props.setDefault(candidate.key) }}
+                      />
+                      <span className={css.modelName}>{candidate.modelName}</span>
+                    </label>
+                  ))}
+                </fieldset>
+              )
+              : null}
             {state.invalid ? <p className={css.invalid}>{t('subagentModelSelectionRequired')}</p> : null}
           </div>
         )

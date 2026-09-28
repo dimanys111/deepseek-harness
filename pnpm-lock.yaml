@@ -2414,6 +2414,9 @@ importers:
       '@deepseek-ai/dsh-client-locale':
         specifier: workspace:*
         version: link:../../client/locale
+      '@deepseek-ai/dsh-client-locale-ru':
+        specifier: workspace:*
+        version: link:../../client/locale-ru
       '@deepseek-ai/dsh-client-modules':
         specifier: workspace:*
         version: link:../../client/modules
@@ -2929,6 +2932,18 @@ importers:
       react:
         specifier: ^18.2.0
         version: 18.3.1
+
+  packages/client/locale-ru:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-client-locale':
+        specifier: workspace:*
+        version: link:../locale
+      '@deepseek-ai/dsh-client-test-runtime':
+        specifier: workspace:*
+        version: link:../../test-support/client-runtime
 
   packages/client/modules:
     devDependencies:

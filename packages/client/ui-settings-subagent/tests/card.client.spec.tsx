@@ -45,6 +45,7 @@ function renderSubagent(
   const models = createSnapshotStore<SubagentModelSelectionCardState>({
     ...settled,
     enabled: false,
+    defaultKey: undefined,
     candidates: [],
     catalogStatus: 'idle',
     catalogPartial: false,
@@ -56,6 +57,7 @@ function renderSubagent(
     resetLimit: vi.fn(),
     toggleEnabled: vi.fn(),
     toggleModel: vi.fn(),
+    setDefault: vi.fn(),
     retryCatalog: vi.fn(),
     save: vi.fn(),
     discard: vi.fn(),
@@ -118,6 +120,36 @@ describe('Subagent model selection fields', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /Deep/ }))
     expect(actions.toggleModel).toHaveBeenCalledWith('alpha\0fast')
     expect(actions.toggleModel).toHaveBeenCalledWith('alpha\0deep')
+  })
+
+  it('stages the inherited default and an explicit default route through their radios', () => {
+    const candidates = [{
+      key: 'alpha\0fast',
+      provider: 'alpha',
+      model: 'fast',
+      providerName: 'Alpha API',
+      modelName: 'Fast',
+      available: true,
+      selected: true,
+    }]
+
+    const actions = renderSubagentModelSelection({ enabled: true, candidates, catalogStatus: 'ready' })
+    const inherit = screen.getByRole('radio', { name: en.subagentModelSelectionDefaultInherit }) as HTMLInputElement
+    expect(inherit.checked).toBe(true)
+    fireEvent.click(screen.getByRole('radio', { name: /Fast/ }))
+    expect(actions.setDefault).toHaveBeenCalledWith('alpha\0fast')
+
+    cleanup()
+    const selected = renderSubagentModelSelection({
+      enabled: true,
+      candidates,
+      defaultKey: 'alpha\0fast',
+      catalogStatus: 'ready',
+    })
+    const explicit = screen.getByRole('radio', { name: /Fast/ }) as HTMLInputElement
+    expect(explicit.checked).toBe(true)
+    fireEvent.click(screen.getByRole('radio', { name: en.subagentModelSelectionDefaultInherit }))
+    expect(selected.setDefault).toHaveBeenCalledWith(undefined)
   })
 
   it('renders directory progress, failures, unavailable routes, and validation', () => {

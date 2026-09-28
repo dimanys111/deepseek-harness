@@ -115,6 +115,8 @@ describe('SubagentModelSelectionCardController', () => {
       expect(host.mutate).toHaveBeenCalledWith([
         { op: 'set', path: ['enabled'], value: true },
         { op: 'set', path: ['allowedModels'], value: [{ provider: 'alpha', model: 'fast' }] },
+        { op: 'set', path: ['defaultProvider'], value: '' },
+        { op: 'set', path: ['defaultModel'], value: '' },
       ], 3)
     })
 
@@ -123,6 +125,260 @@ describe('SubagentModelSelectionCardController', () => {
       dirty: false,
       saving: false,
       failed: false,
+    })
+  })
+
+  it('ignores a default staged while selection is disabled', async () => {
+    const host = stubConfigForm<SubagentModelSelectionSettings>()
+    acceptWrites(host)
+    const models = modelsApi({
+      groups: [{ id: 'alpha', name: 'Alpha API', models: [{ id: 'fast', name: 'Fast' }] }],
+    })
+    const controller = new SubagentModelSelectionCardController(host.scope, models.ctx)
+    host.publish({
+      status: 'ready', writable: true, revision: 1,
+      value: { enabled: false, allowedModels: [{ provider: 'alpha', model: 'fast' }] },
+      user: {},
+    })
+    const face = controller.inject()
+    await vi.waitFor(() => {
+      expect(face.hooks.subagentModelSelectionCard.getSnapshot().candidates).toHaveLength(1)
+    })
+    face.setDefault('alpha\0fast')
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot()).toMatchObject({
+      defaultKey: undefined, dirty: false,
+    })
+    expect(host.mutate).not.toHaveBeenCalled()
+  })
+
+  it('ignores a default route that is not among the selected routes', async () => {
+    const host = stubConfigForm<SubagentModelSelectionSettings>()
+    acceptWrites(host)
+    const models = modelsApi({
+      groups: [
+        { id: 'alpha', name: 'Alpha API', models: [{ id: 'fast', name: 'Fast' }] },
+        { id: 'beta', name: 'Beta API', models: [{ id: 'slow', name: 'Slow' }] },
+      ],
+    })
+    const controller = new SubagentModelSelectionCardController(host.scope, models.ctx)
+    host.publish({
+      status: 'ready', writable: true, revision: 2,
+      value: { enabled: true, allowedModels: [{ provider: 'alpha', model: 'fast' }] },
+      user: {},
+    })
+    const face = controller.inject()
+    await vi.waitFor(() => {
+      expect(face.hooks.subagentModelSelectionCard.getSnapshot().candidates).toHaveLength(2)
+    })
+    face.setDefault('beta\0slow')
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot()).toMatchObject({
+      defaultKey: undefined, dirty: false,
+    })
+  })
+
+  it('stages a default when the stored value names none', async () => {
+    const host = stubConfigForm<SubagentModelSelectionSettings>()
+    acceptWrites(host)
+    const models = modelsApi({
+      groups: [{ id: 'alpha', name: 'Alpha API', models: [{ id: 'fast', name: 'Fast' }] }],
+    })
+    const controller = new SubagentModelSelectionCardController(host.scope, models.ctx)
+    host.publish({
+      status: 'ready', writable: true, revision: 3,
+      value: { enabled: true, allowedModels: [{ provider: 'alpha', model: 'fast' }] },
+      user: {},
+    })
+    const face = controller.inject()
+    await vi.waitFor(() => {
+      expect(face.hooks.subagentModelSelectionCard.getSnapshot().candidates).toHaveLength(1)
+    })
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot().defaultKey).toBeUndefined()
+    face.setDefault('alpha\0fast')
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot()).toMatchObject({
+      defaultKey: 'alpha\0fast', dirty: true,
+    })
+  })
+
+  it('stages an explicit inherit when the stored value names a route', async () => {
+    const host = stubConfigForm<SubagentModelSelectionSettings>()
+    acceptWrites(host)
+    const models = modelsApi({
+      groups: [{ id: 'alpha', name: 'Alpha API', models: [{ id: 'fast', name: 'Fast' }] }],
+    })
+    const controller = new SubagentModelSelectionCardController(host.scope, models.ctx)
+    host.publish({
+      status: 'ready', writable: true, revision: 5,
+      value: {
+        enabled: true,
+        allowedModels: [{ provider: 'alpha', model: 'fast' }],
+        defaultProvider: 'alpha',
+        defaultModel: 'fast',
+      },
+      user: {},
+    })
+    const face = controller.inject()
+    await vi.waitFor(() => {
+      expect(face.hooks.subagentModelSelectionCard.getSnapshot().candidates).toHaveLength(1)
+    })
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot().defaultKey).toBe('alpha\0fast')
+    face.setDefault(undefined)
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot()).toMatchObject({
+      defaultKey: undefined, dirty: true,
+    })
+  })
+
+  it('ignores a staged default whose route is absent from the catalog', async () => {
+    const host = stubConfigForm<SubagentModelSelectionSettings>()
+    acceptWrites(host)
+    const models = modelsApi({
+      groups: [{ id: 'beta', name: 'Beta API', models: [{ id: 'slow', name: 'Slow' }] }],
+    })
+    const controller = new SubagentModelSelectionCardController(host.scope, models.ctx)
+    host.publish({
+      status: 'ready', writable: true, revision: 1,
+      value: {
+        enabled: true,
+        allowedModels: [{ provider: 'alpha', model: 'fast' }],
+        defaultProvider: 'alpha',
+        defaultModel: 'ghost',
+      },
+      user: {},
+    })
+    const face = controller.inject()
+    await vi.waitFor(() => {
+      expect(face.hooks.subagentModelSelectionCard.getSnapshot().candidates).toHaveLength(2)
+    })
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot()).toMatchObject({ defaultKey: undefined })
+    face.setDefault('alpha\0ghost')
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot()).toMatchObject({ defaultKey: undefined })
+  })
+
+  it('stages and saves one allowed route as the child default', async () => {
+    const host = stubConfigForm<SubagentModelSelectionSettings>()
+    acceptWrites(host)
+    const models = modelsApi({
+      groups: [
+        { id: 'alpha', name: 'Alpha API', models: [{ id: 'fast', name: 'Fast' }] },
+        { id: 'beta', name: 'Beta API', models: [{ id: 'slow', name: 'Slow' }] },
+      ],
+    })
+    const controller = new SubagentModelSelectionCardController(host.scope, models.ctx)
+    host.publish({
+      status: 'ready', writable: true, revision: 4,
+      value: {
+        enabled: true,
+        allowedModels: [{ provider: 'alpha', model: 'fast' }, { provider: 'beta', model: 'slow' }],
+        defaultProvider: 'alpha', defaultModel: 'fast',
+      },
+      user: {},
+    })
+    const face = controller.inject()
+    await vi.waitFor(() => {
+      expect(face.hooks.subagentModelSelectionCard.getSnapshot().candidates).toHaveLength(2)
+    })
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot().defaultKey).toBe('alpha\0fast')
+
+    face.setDefault('beta\0slow')
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot()).toMatchObject({
+      defaultKey: 'beta\0slow', dirty: true,
+    })
+    face.save()
+    await vi.waitFor(() => {
+      expect(host.mutate).toHaveBeenCalledWith([
+        { op: 'set', path: ['enabled'], value: true },
+        {
+          op: 'set',
+          path: ['allowedModels'],
+          value: [{ provider: 'alpha', model: 'fast' }, { provider: 'beta', model: 'slow' }],
+        },
+        { op: 'set', path: ['defaultProvider'], value: 'beta' },
+        { op: 'set', path: ['defaultModel'], value: 'slow' },
+      ], 4)
+    })
+  })
+
+  it('stages inheritance when the default is cleared', async () => {
+    const host = stubConfigForm<SubagentModelSelectionSettings>()
+    acceptWrites(host)
+    const models = modelsApi({
+      groups: [{ id: 'alpha', name: 'Alpha API', models: [{ id: 'fast', name: 'Fast' }] }],
+    })
+    const controller = new SubagentModelSelectionCardController(host.scope, models.ctx)
+    host.publish({
+      status: 'ready', writable: true, revision: 5,
+      value: {
+        enabled: true,
+        allowedModels: [{ provider: 'alpha', model: 'fast' }],
+        defaultProvider: 'alpha', defaultModel: 'fast',
+      },
+      user: {},
+    })
+    const face = controller.inject()
+    await vi.waitFor(() => {
+      expect(face.hooks.subagentModelSelectionCard.getSnapshot().candidates).toHaveLength(1)
+    })
+    face.setDefault(undefined)
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot()).toMatchObject({
+      defaultKey: undefined, dirty: true,
+    })
+    face.save()
+    await vi.waitFor(() => {
+      expect(host.mutate).toHaveBeenCalledWith([
+        { op: 'set', path: ['enabled'], value: true },
+        { op: 'set', path: ['allowedModels'], value: [{ provider: 'alpha', model: 'fast' }] },
+        { op: 'set', path: ['defaultProvider'], value: '' },
+        { op: 'set', path: ['defaultModel'], value: '' },
+      ], 5)
+    })
+  })
+
+  it('drops the staged default when its route is deselected', async () => {
+    const host = stubConfigForm<SubagentModelSelectionSettings>()
+    acceptWrites(host)
+    const models = modelsApi({
+      groups: [{ id: 'alpha', name: 'Alpha API', models: [{ id: 'fast', name: 'Fast' }] }],
+    })
+    const controller = new SubagentModelSelectionCardController(host.scope, models.ctx)
+    host.publish({
+      status: 'ready', writable: true, revision: 6,
+      value: {
+        enabled: true,
+        allowedModels: [{ provider: 'alpha', model: 'fast' }, { provider: 'beta', model: 'slow' }],
+        defaultProvider: 'alpha', defaultModel: 'fast',
+      },
+      user: {},
+    })
+    const face = controller.inject()
+    await vi.waitFor(() => {
+      expect(face.hooks.subagentModelSelectionCard.getSnapshot().candidates).toHaveLength(2)
+    })
+    face.toggleModel('alpha\0fast')
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot()).toMatchObject({
+      defaultKey: undefined, dirty: true,
+    })
+  })
+
+  it('ignores a default request for a route that is not selected', async () => {
+    const host = stubConfigForm<SubagentModelSelectionSettings>()
+    acceptWrites(host)
+    const models = modelsApi({
+      groups: [
+        { id: 'alpha', name: 'Alpha API', models: [{ id: 'fast', name: 'Fast' }] },
+        { id: 'beta', name: 'Beta API', models: [{ id: 'slow', name: 'Slow' }] },
+      ],
+    })
+    const controller = new SubagentModelSelectionCardController(host.scope, models.ctx)
+    host.publish({
+      status: 'ready', writable: true, revision: 7,
+      value: { enabled: true, allowedModels: [{ provider: 'alpha', model: 'fast' }] }, user: {},
+    })
+    const face = controller.inject()
+    await vi.waitFor(() => {
+      expect(face.hooks.subagentModelSelectionCard.getSnapshot().candidates).toHaveLength(2)
+    })
+    face.setDefault('beta\0slow')
+    expect(face.hooks.subagentModelSelectionCard.getSnapshot()).toMatchObject({
+      defaultKey: undefined, dirty: false,
     })
   })
 
@@ -214,6 +470,8 @@ describe('SubagentModelSelectionCardController', () => {
       expect(host.mutate).toHaveBeenCalledWith([
         { op: 'set', path: ['enabled'], value: false },
         { op: 'set', path: ['allowedModels'], value: [{ provider: 'alpha', model: 'fast' }] },
+        { op: 'set', path: ['defaultProvider'], value: '' },
+        { op: 'set', path: ['defaultModel'], value: '' },
       ], 5)
     })
     expect(face.hooks.subagentModelSelectionCard.getSnapshot()).toMatchObject({
@@ -337,6 +595,8 @@ describe('SubagentModelSelectionCardController', () => {
       expect(host.mutate).toHaveBeenCalledWith([
         { op: 'set', path: ['enabled'], value: true },
         { op: 'set', path: ['allowedModels'], value: [{ provider: 'alpha', model: 'fast' }] },
+        { op: 'set', path: ['defaultProvider'], value: '' },
+        { op: 'set', path: ['defaultModel'], value: '' },
       ], 2)
     })
   })
@@ -556,6 +816,8 @@ describe('shared Subagent card actions', () => {
     expect(models.mutate).toHaveBeenCalledWith([
       { op: 'set', path: ['enabled'], value: true },
       { op: 'set', path: ['allowedModels'], value: [{ provider: 'alpha', model: 'fast' }] },
+      { op: 'set', path: ['defaultProvider'], value: '' },
+      { op: 'set', path: ['defaultModel'], value: '' },
     ], 5)
   })
 

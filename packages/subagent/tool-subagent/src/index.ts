@@ -477,10 +477,12 @@ export function apply(ctx: Context, config: Config, session?: Session): void {
 
           const modelRequest = args as DelegationModelRequest
           const parentOptions = parentAgentOptionsForDelegation(parent)
+          const policyDefault = modelSelectionPolicy?.defaultRoute
           const requiresRoutePreflight = hasDelegationModelRequest(modelRequest)
             || hasConfiguredLlmSelection(config.agentOptions)
-          const configuredChildAgentOptions = requiresRoutePreflight && providerRouteDefaults !== undefined
-            ? { ...providerRouteDefaults, ...config.agentOptions }
+            || policyDefault !== undefined
+          const configuredChildAgentOptions = requiresRoutePreflight
+            ? { ...providerRouteDefaults, ...policyDefault, ...config.agentOptions }
             : config.agentOptions
           const requestedChildAgentOptions = requestedAgentOptions(
             parentOptions,
@@ -621,8 +623,8 @@ export function apply(ctx: Context, config: Config, session?: Session): void {
     const freshSession = target.firstLiveSeq === 0
       // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
       && target.eventAt(SessionSeq(0))?.type !== 'session/end-seed'
-    let allowedModels = subagentModelSelectionPolicy(ctx.sessionProjections, target)
-    if (allowedModels === undefined) {
+    let recorded = subagentModelSelectionPolicy(ctx.sessionProjections, target)
+    if (recorded === undefined) {
       const parentId = target.header.origin === 'subagent'
         ? target.header.parentSession
         : undefined
@@ -632,18 +634,28 @@ export function apply(ctx: Context, config: Config, session?: Session): void {
           throw new Error('tool-subagent: child model-selection inheritance requires the Session registry')
         }
         const parent = sessions.get(parentId)
-        allowedModels = parent === undefined
+        recorded = parent === undefined
           ? undefined
           : subagentModelSelectionPolicy(ctx.sessionProjections, parent)
       } else if (freshSession) {
         const current = settings.current()
-        allowedModels = current.enabled ? current.allowedModels : undefined
+        recorded = current.enabled
+          ? {
+            allowedModels: current.allowedModels,
+            ...current.defaultRoute === undefined ? {} : { defaultRoute: current.defaultRoute },
+          }
+          : undefined
       }
     }
-    if (allowedModels !== undefined) {
-      recordSubagentModelSelection(ctx.sessionProjections, target, allowedModels)
+    if (recorded !== undefined) {
+      recordSubagentModelSelection(ctx.sessionProjections, target, recorded.allowedModels, recorded.defaultRoute)
     }
-    return allowedModels === undefined ? undefined : { routes: allowedModels }
+    return recorded === undefined
+      ? undefined
+      : {
+        routes: recorded.allowedModels,
+        ...recorded.defaultRoute === undefined ? {} : { defaultRoute: recorded.defaultRoute },
+      }
   }
 
   if (session !== undefined) {

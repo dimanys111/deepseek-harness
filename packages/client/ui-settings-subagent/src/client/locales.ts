@@ -20,6 +20,8 @@ export type SubagentSettingsLocaleKey =
   | 'subagentModelSelectionPartial' | 'subagentModelSelectionUnavailable'
   | 'subagentModelSelectionUnavailableGroup' | 'subagentModelSelectionEmpty'
   | 'subagentModelSelectionRequired' | 'subagentModelSelectionConflict' | 'subagentModelSelectionOff'
+  | 'subagentModelSelectionDefault' | 'subagentModelSelectionDefaultHint'
+  | 'subagentModelSelectionDefaultInherit'
 
 /** English copy. */
 export const en: Record<SubagentSettingsLocaleKey, string> = {
@@ -57,6 +59,9 @@ export const en: Record<SubagentSettingsLocaleKey, string> = {
   subagentModelSelectionEmpty: 'No model provider currently advertises a model.',
   subagentModelSelectionRequired: 'Select at least one model before saving.',
   subagentModelSelectionConflict: 'Settings changed elsewhere. Discard your draft and try again.',
+  subagentModelSelectionDefault: 'Default model for Subagents',
+  subagentModelSelectionDefaultHint: 'The model a Subagent uses when a delegation does not name one. Applies only to new sessions.',
+  subagentModelSelectionDefaultInherit: 'Inherit from the parent agent',
   subagentModelSelectionOff: 'Subagents use configured defaults or inherit the parent agent\'s model. Saved model choices are retained.',
 }
 
@@ -97,6 +102,9 @@ export const zh: Record<SubagentSettingsLocaleKey, string> = {
   subagentModelSelectionRequired: '保存前请至少选择一个模型。',
   subagentModelSelectionConflict: '设置已在其他位置更新。请放弃修改后重试。',
   subagentModelSelectionOff: '关闭后，子智能体使用配置的默认模型或继承父 Agent 的模型；已选模型会保留。',
+  subagentModelSelectionDefault: '子智能体的默认模型',
+  subagentModelSelectionDefaultHint: '委派未指定模型时子智能体使用的模型。仅影响新会话。',
+  subagentModelSelectionDefaultInherit: '继承父 Agent 的模型',
 }
 
 /**
