@@ -23,6 +23,12 @@ export const AllowedModelRouteSchema: z<AllowedModelRoute> = z.object({
 export interface ModelSelectionPolicy {
   /** Exact provider/model routes authorized for explicit selection. */
   readonly routes: readonly AllowedModelRoute[]
+  /**
+   * Child route used when a delegation supplies no explicit selection and the
+   * tool instance configures no route of its own. Absent means the child keeps
+   * its provider/inherited routing.
+   */
+  readonly defaultRoute?: AllowedModelRoute
 }
 
 /**
@@ -58,6 +64,22 @@ export function assertAllowedModelRoutes(routes: unknown): asserts routes is rea
       throw new Error(`subagent model selection repeats route "${route.provider}/${route.model}"`)
     }
     seen.add(key)
+  }
+}
+
+/**
+ * Reject a default child route absent from the authorized route list.
+ * @param routes - Validated authorized routes.
+ * @param route - Candidate default route, or undefined to leave the child inherited.
+ */
+export function assertAllowedDefaultRoute(
+  routes: readonly AllowedModelRoute[],
+  route: AllowedModelRoute | undefined,
+): void {
+  if (route === undefined) return
+  assertAllowedModelRoutes([route])
+  if (!routes.some(candidate => modelRouteKey(candidate) === modelRouteKey(route))) {
+    throw new Error(`subagent default route "${route.provider}/${route.model}" is not among the allowed models`)
   }
 }
 

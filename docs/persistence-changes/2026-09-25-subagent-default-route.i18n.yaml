@@ -1,0 +1,28 @@
+# Bilingual-pair consistency record for 2026-09-25-subagent-default-route.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/persistence-changes/2026-09-25-subagent-default-route.md
+/:
+  en: 3d5a424ae7d7e46b
+  zh: c22a8e4a62d8cc1a
+/2026-09-25-subagent-default-route:
+  en: f03fe6dc150adbcd
+  zh: c469214e5daef589
+/2026-09-25-subagent-default-route/summary:
+  en: 87588fdd011c6853
+  zh: 49689fa532b5e883
+/2026-09-25-subagent-default-route/table-of-contents:
+  en: 6cf314a069ceb451
+  zh: 9adff678e9ecab3b
+/2026-09-25-subagent-default-route/declaration:
+  en: 6907136f28e48c90
+  zh: 02f8298485f3d8e7
+/2026-09-25-subagent-default-route/compatibility:
+  en: cd7cf4cc94f9e915
+  zh: 9a1fda7c100ff100
+/2026-09-25-subagent-default-route/verification:
+  en: 2b2c973cd3fc35e9
+  zh: 368ed74c411ff04a
+/2026-09-25-subagent-default-route/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269

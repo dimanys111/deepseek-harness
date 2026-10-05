@@ -12,9 +12,11 @@ import { MockAdapter } from '../../../core/agent-loop/tests/mock-adapter.ts'
 import * as mock from './scripted-provider.ts'
 import * as tool from '../src/index.ts'
 import {
+  assertAllowedDefaultRoute,
   assertAllowedModelRoutes,
   assertAllowedModelSelection,
   preflightChildLlmRoute,
+  requestedAgentOptions,
 } from '../src/model-selection.ts'
 import { callSubagent, modelSelectionSetupAgent, setup, text } from './harness.ts'
 
@@ -38,6 +40,33 @@ function parentWithRoute(
 }
 
 describe('dsh-tool-subagent model selection', () => {
+  it('rejects a default route outside the authorized list', () => {
+    expect(() => { assertAllowedDefaultRoute([{ provider: 'alpha', model: 'fast' }], undefined) }).not.toThrow()
+    expect(() => {
+      assertAllowedDefaultRoute([{ provider: 'alpha', model: 'fast' }], { provider: 'beta', model: 'slow' })
+    }).toThrow('is not among the allowed models')
+  })
+
+  it('falls back to the parent route when the instance config names none', () => {
+    const options = requestedAgentOptions(
+      { provider: 'alpha', model: 'parent-model' },
+      undefined,
+      { provider: 'alpha', model: 'other-model' },
+      true,
+    )
+    expect(options).toEqual({ provider: 'alpha', model: 'other-model' })
+  })
+
+  it('treats a model-only override of the configured provider as a route change', () => {
+    const options = requestedAgentOptions(
+      { provider: 'alpha', model: 'fast', reasoningEffort: ReasoningEffortId('low') },
+      { provider: 'alpha', model: 'fast' },
+      { provider: 'alpha', model: 'slow' },
+      true,
+    )
+    expect(options).toEqual({ provider: 'alpha', model: 'slow' })
+  })
+
   it('rejects empty route ids at the configuration boundary', () => {
     expect(() => { assertAllowedModelRoutes([{ provider: '', model: 'model' }]) })
       .toThrow('requires non-empty provider and model ids')

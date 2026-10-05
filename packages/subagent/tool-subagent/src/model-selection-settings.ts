@@ -5,6 +5,7 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import {
   AllowedModelRouteSchema,
+  assertAllowedDefaultRoute,
   assertAllowedModelRoutes,
   type AllowedModelRoute,
 } from './model-selection.ts'
@@ -22,14 +23,23 @@ export interface SubagentModelSelectionSettings {
   enabled: boolean
   /** Exact child LLM routes offered to newly composed top-level Sessions. */
   allowedModels: AllowedModelRoute[]
+  /**
+   * Child route used when a delegation makes no explicit selection. Absent
+   * leaves the child on its configured or inherited route.
+   */
+  defaultRoute?: AllowedModelRoute
 }
 
 /** Optional deployment base for the preference. */
 export interface Config {
   /** Initial enabled state inherited when the user document does not override it. */
   enabled: Volatile<boolean>
-  /** Initial route list inherited when the user document does not override it. */
+  /** Initial routes inherited when the user document does not override them. */
   allowedModels: Volatile<AllowedModelRoute[]>
+  /** Provider of the initial child default route, or empty to inherit. */
+  defaultProvider: Volatile<string>
+  /** Model of the initial child default route, or empty to inherit. */
+  defaultModel: Volatile<string>
 }
 
 /** Singleton settings owner read when delegation tools are composed for a Session. */
@@ -37,6 +47,8 @@ export class SubagentModelSelectionConfig extends Service {
   static Config = z.object({
     enabled: z.boolean().default(false).volatile(),
     allowedModels: z.array(AllowedModelRouteSchema).default([]).volatile(),
+    defaultProvider: z.string().default('').volatile(),
+    defaultModel: z.string().default('').volatile(),
   })
 
   constructor(ctx: Context, private config: Config) {
@@ -54,7 +66,18 @@ export class SubagentModelSelectionConfig extends Service {
     if (enabled && allowedModels.length === 0) {
       throw new Error('enabled subagent model selection requires at least one allowed model')
     }
-    return { enabled, allowedModels: allowedModels.map(route => ({ ...route })) }
+    const provider = this.config.defaultProvider.get()
+    const model = this.config.defaultModel.get()
+    if ((provider === '') !== (model === '')) {
+      throw new Error('subagent default route requires both provider and model, or neither')
+    }
+    const rawDefault = provider === '' ? undefined : { provider, model }
+    assertAllowedDefaultRoute(allowedModels, rawDefault)
+    return {
+      enabled,
+      allowedModels: allowedModels.map(route => ({ ...route })),
+      ...rawDefault === undefined ? {} : { defaultRoute: { ...rawDefault } },
+    }
   }
 
 }
